@@ -6,19 +6,6 @@ import Marketplace from '../abis/Marketplace.json'
 import Navbar from './Navbar'
 import Main from './Main'
 
-const listProduct = [
-  {
-    id: 1,
-    name: 'Coat',
-    price: 1000000000000000000
-  },
-  {
-    id: 2,
-    name: 'Mac 2021',
-    price: 20000000000000000000
-  }
-]
-
 class App extends Component {
 
   async componentWillMount() {
@@ -50,17 +37,18 @@ class App extends Component {
       const marketplace = web3.eth.Contract(Marketplace.abi, networkData.address)
 
       this.setState({ marketplace })
-      const orderCount = await marketplace.methods.orderCount().call();
-      this.setState({ orderCount })
+
+      const productCount = await marketplace.methods.productCount().call()
+      this.setState({ productCount })
       // Load products
-      for (var i = 1; i <= orderCount; i++) {
-        const order = await marketplace.methods.orders(i).call();
-        console.log(order);
+      for (var i = 1; i <= productCount; i++) {
+        const product = await marketplace.methods.products(i).call();
+        console.log(product);
         this.setState({
-          orders: [...this.state.orders, order]
+          products: [...this.state.products, product]
         })
       }
-      this.setState({ loading: false, products: listProduct})
+      this.setState({ loading: false })
 
     } else {
       window.alert('Marketplace contract not deployed to detected network.')
@@ -72,37 +60,27 @@ class App extends Component {
     super(props)
     this.state = {
       account: '',
-      orderCount: 0,
+      productCount: 0,
       products: [],
-      orders: [],
       loading: true
     }
-    this.getPayment = this.getPayment.bind(this);
-    this.orderProduct = this.orderProduct.bind(this);
+
+    this.createProduct = this.createProduct.bind(this)
+    this.purchaseProduct = this.purchaseProduct.bind(this)
   }
 
-  orderProduct(code, price, name) {
-    const web3 = window.web3;
+  createProduct(name, price) {
     this.setState({ loading: true })
-    let hashCode = web3.utils.sha3(code);
-    var process = this.state.marketplace.methods.orderProduct(hashCode, name).send({ from: this.state.account, value: price });
+    var process = this.state.marketplace.methods.createProduct(name, price).send({ from: this.state.account });
     process.on('confirmation', (confirmationNumber, receipt) => {
-      window.location.reload();
-    })
-    process.on('error', (confirmationNumber, receipt) => {
       window.location.reload();
     })
   }
 
-  getPayment(code){
-    const web3 = window.web3;
+  purchaseProduct(id, price) {
     this.setState({ loading: true })
-    let hashCode = web3.utils.sha3(code);
-    var process = this.state.marketplace.methods.getPayment(hashCode).send({ from: this.state.account });
+    var process = this.state.marketplace.methods.purchaseProduct(id).send({ from: this.state.account, value: price });
     process.on('confirmation', (confirmationNumber, receipt) => {
-      window.location.reload();
-    })
-    process.on('error', (confirmationNumber, receipt) => {
       window.location.reload();
     })
   }
@@ -119,9 +97,8 @@ class App extends Component {
                 : <Main
                   account={this.state.account}
                   products={this.state.products}
-                  orders={this.state.orders}
-                  orderProduct={this.orderProduct} 
-                  getPayment={this.getPayment}/>
+                  createProduct={this.createProduct}
+                  purchaseProduct={this.purchaseProduct} />
               }
             </main>
           </div>
